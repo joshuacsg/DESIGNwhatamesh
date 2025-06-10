@@ -5,10 +5,10 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
+} from "../components/ui/popover";
+import { Button } from "../components/ui/button";
 import { ColorPicker } from "./ui/color-picker.js";
-import { Input } from "@/components/ui/input";
+import { Input } from "../components/ui/input";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { toBlobURL } from "@ffmpeg/util";
 

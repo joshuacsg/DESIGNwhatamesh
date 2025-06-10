@@ -1,4 +1,3 @@
-import path from "path"
 import tailwindcss from '@tailwindcss/vite'
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
@@ -9,11 +8,11 @@ export default defineConfig({
     exclude: ['@ffmpeg/ffmpeg'],
   },
   plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
+  // resolve: {
+  //   alias: {
+  //     "#": path.resolve(__dirname, "./src"),
+  //   },
+  // },
   server: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
