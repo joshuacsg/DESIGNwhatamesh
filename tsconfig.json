@@ -5,9 +5,9 @@
     { "path": "./tsconfig.node.json" }
   ],
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "gradient": ["gradient.js"]
-    }
+    
+    // "paths": {
+    //   "gradient": ["gradient.js"]
+    // }
   }
 }
