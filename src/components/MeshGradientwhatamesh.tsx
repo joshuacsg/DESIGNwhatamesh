@@ -39,7 +39,7 @@ const MeshGradientwhatamesh: React.FC = () => {
     offscreenCanvas.width = width;
     offscreenCanvas.height = height;
     const ctx = offscreenCanvas.getContext("2d");
-
+//
     if (!ctx) {
       console.error("Failed to get 2D context from offscreen canvas.");
       setIsRecording(false);
