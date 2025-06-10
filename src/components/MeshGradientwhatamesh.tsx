@@ -42,14 +42,24 @@ const MeshGradientwhatamesh: React.FC = () => {
 
   const loadFFmpeg = async () => {
     if (!ffmpegRef.current) {
+      const baseURL = "https://unpkg.com/@ffmpeg/core-mt@0.12.1/dist/esm";
       const ffmpeg = new FFmpeg();
       ffmpeg.on("log", ({ message }) => {
         console.log(message);
       });
-      const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
       await ffmpeg.load({
-        coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, "text/javascript"),
-        wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, "application/wasm"),
+        coreURL: await toBlobURL(
+          `${baseURL}/ffmpeg-core.js`,
+          "text/javascript"
+        ),
+        wasmURL: await toBlobURL(
+          `${baseURL}/ffmpeg-core.wasm`,
+          "application/wasm"
+        ),
+        workerURL: await toBlobURL(
+          `${baseURL}/ffmpeg-core.worker.js`,
+          "text/javascript"
+        ),
       });
       ffmpegRef.current = ffmpeg;
     }
@@ -68,7 +78,10 @@ const MeshGradientwhatamesh: React.FC = () => {
     const inputName = "input.webm";
     const outputName = "output.webp";
 
-    await ffmpeg.writeFile(inputName, new Uint8Array(await webmBlob.arrayBuffer()));
+    await ffmpeg.writeFile(
+      inputName,
+      new Uint8Array(await webmBlob.arrayBuffer())
+    );
     await ffmpeg.exec(["-i", inputName, outputName]);
 
     const data = await ffmpeg.readFile(outputName);
@@ -80,7 +93,7 @@ const MeshGradientwhatamesh: React.FC = () => {
   const handleRecord = () => {
     // Close the popover when starting recording
     setRecordPopoverOpen(false);
-    
+
     const canvas = document.getElementById(
       "gradient-canvas"
     ) as HTMLCanvasElement;
@@ -119,7 +132,7 @@ const MeshGradientwhatamesh: React.FC = () => {
       }
       return;
     }
-    
+
     const mimeType = "video/webm"; // Always record in webm
     const stream = offscreenCanvas.captureStream();
     const recorder = new MediaRecorder(stream, { mimeType });
@@ -175,7 +188,7 @@ const MeshGradientwhatamesh: React.FC = () => {
         const imageData = ctx.getImageData(0, 0, width, height);
         loopFrames.push(imageData);
       }
-      
+
       frameCount++;
       animationFrameId = requestAnimationFrame(drawFrame);
     };
@@ -219,14 +232,16 @@ const MeshGradientwhatamesh: React.FC = () => {
 
       // First, play the original video
       const video = document.createElement("video");
-      video.src = URL.createObjectURL(new Blob(recordedChunks, { type: mimeType }));
+      video.src = URL.createObjectURL(
+        new Blob(recordedChunks, { type: mimeType })
+      );
       video.muted = true;
-      
+
       loopRecorder.start();
 
       video.onloadeddata = () => {
         video.play();
-        
+
         const drawOriginalVideo = () => {
           if (!video.ended) {
             loopCtx.drawImage(video, 0, 0, width, height);
@@ -236,33 +251,33 @@ const MeshGradientwhatamesh: React.FC = () => {
             addLoopFrames();
           }
         };
-        
+
         drawOriginalVideo();
       };
 
       const addLoopFrames = () => {
         let loopIndex = 0;
         const fadeFrames = 60; // Number of frames for fade effect
-        
+
         const drawLoopFrame = () => {
           if (loopIndex < loopFrames.length) {
             const fadeProgress = Math.min(loopIndex / fadeFrames, 1);
-            
+
             // Create temporary canvas for fade effect
             const tempCanvas = document.createElement("canvas");
             tempCanvas.width = width;
             tempCanvas.height = height;
             const tempCtx = tempCanvas.getContext("2d");
-            
+
             if (tempCtx) {
               tempCtx.putImageData(loopFrames[loopIndex], 0, 0);
-              
+
               // Apply fade effect
               loopCtx.globalAlpha = fadeProgress;
               loopCtx.drawImage(tempCanvas, 0, 0);
               loopCtx.globalAlpha = 1;
             }
-            
+
             loopIndex++;
             setTimeout(drawLoopFrame, 1000 / fps);
           } else {
@@ -272,20 +287,20 @@ const MeshGradientwhatamesh: React.FC = () => {
             }, 500);
           }
         };
-        
+
         drawLoopFrame();
       };
     };
 
     recorder.onstop = async () => {
       cancelAnimationFrame(animationFrameId);
-      
+
       // Clean up countdown
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
       }
       setCountdown(0);
-      
+
       if (enableLooping && loopFrames.length > 0) {
         // Create the looped version
         createLoopedVideo();
@@ -309,10 +324,14 @@ const MeshGradientwhatamesh: React.FC = () => {
 
     recordingTimeoutRef.current = setTimeout(() => {
       recorder.stop();
-          }, recordDuration * 1000);
+    }, recordDuration * 1000);
   };
 
-  const downloadBlob = (blob: Blob, format: "webm" | "webp", isLooped: boolean) => {
+  const downloadBlob = (
+    blob: Blob,
+    format: "webm" | "webp",
+    isLooped: boolean
+  ) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -332,12 +351,12 @@ const MeshGradientwhatamesh: React.FC = () => {
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
     }
-    
+
     // Reset states
     setIsRecording(false);
     setCountdown(0);
     setIsProcessing(false);
-    
+
     // Note: We don't try to stop the MediaRecorder here as it might cause issues
     // Instead we just reset the UI state and let the recording complete naturally
   };
@@ -347,16 +366,18 @@ const MeshGradientwhatamesh: React.FC = () => {
       {/* Canvas for the gradient background */}
       <canvas
         id="gradient-canvas"
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          "--gradient-color-1": color1,
-          "--gradient-color-2": color2,
-          "--gradient-color-3": color3,
-        } as React.CSSProperties}
+        style={
+          {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            "--gradient-color-1": color1,
+            "--gradient-color-2": color2,
+            "--gradient-color-3": color3,
+          } as React.CSSProperties
+        }
       />
 
       <div className="container h-screen mx-auto flex justify-center items-center relative">
@@ -393,32 +414,37 @@ const MeshGradientwhatamesh: React.FC = () => {
         <PopoverTrigger asChild>
           <Button
             className={`fixed bottom-5 left-5 z-20 ${
-              isRecording && isHovering && !isProcessing ? "border-red-500 text-red-600" : ""
+              isRecording && isHovering && !isProcessing
+                ? "border-red-500 text-red-600"
+                : ""
             }`}
             variant={"outline"}
             disabled={isProcessing}
-            onClick={isRecording && !isProcessing ? handleCancelRecording : undefined}
+            onClick={
+              isRecording && !isProcessing ? handleCancelRecording : undefined
+            }
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
           >
-            {isRecording 
-              ? isConverting 
-                ? (
-                    <div className="flex items-center space-x-2">
-                      <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full"></div>
-                      <span>Converting...</span>
-                    </div>
-                  )
-                : (isProcessing || countdown === 0)
-                  ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full"></div>
-                        <span>Processing</span>
-                      </div>
-                    )
-                  : (isHovering && !isProcessing ? "Cancel" : `Recording... ${countdown}s`)
-              : "Record"
-            }
+            {isRecording ? (
+              isConverting ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full"></div>
+                  <span>Converting...</span>
+                </div>
+              ) : isProcessing || countdown === 0 ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full"></div>
+                  <span>Processing</span>
+                </div>
+              ) : isHovering && !isProcessing ? (
+                "Cancel"
+              ) : (
+                `Recording... ${countdown}s`
+              )
+            ) : (
+              "Record"
+            )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="bg-white">
@@ -539,6 +565,6 @@ const MeshGradientwhatamesh: React.FC = () => {
       </Popover>
     </div>
   );
-}
+};
 
 export default MeshGradientwhatamesh;
