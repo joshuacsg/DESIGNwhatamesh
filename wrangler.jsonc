@@ -1,12 +1,12 @@
 {
-    "name": "22-gradient-editor",
+    "name": "22-gradient-playground",
     "compatibility_date": "2025-06-10",
     "compatibility_flags": ["nodejs_compat"],
     "main": "src/main.tsx",
     "routes": [
         {
             "pattern": "**",
-            "zone_name": "22-gradient-editor.pages.dev"
+            "zone_name": "22-gradient-playground.pages.dev"
         }
     ]
 }
