@@ -2,7 +2,7 @@
     "name": "22-gradient-editor",
     "compatibility_date": "2025-06-10",
     "compatibility_flags": ["nodejs_compat"],
-    "main": "src/index.ts",
+    "main": "src/main.tsx",
     "routes": [
         {
             "pattern": "**",
