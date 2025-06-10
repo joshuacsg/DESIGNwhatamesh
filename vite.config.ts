@@ -5,7 +5,7 @@ import { defineConfig } from "vite"
 // https://vite.dev/config/
 export default defineConfig({
   optimizeDeps: {
-    exclude: ['@ffmpeg/ffmpeg'],
+    exclude: ['@ffmpeg/ffmpeg','tailwindcss'],
   },
   plugins: [react(), tailwindcss()],
   // resolve: {
