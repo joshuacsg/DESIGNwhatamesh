@@ -17,7 +17,8 @@
     "@radix-ui/react-popover": "^1.1.14",
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.5",
-    "@tailwindcss/vite": "4.0.3",
+    "@tailwindcss/postcss": "^4.1.4",
+    "@tailwindcss/vite": "^4.1.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.513.0",
@@ -37,19 +38,11 @@
     "autoprefixer": "^10.4.19",
     "eslint": "^9.22.0",
     "postcss": "^8.5.3",
-    "tailwindcss": "4.0.3",
+    "tailwindcss": "^4.1.4",
     "tw-animate-css": "^1.2.8",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.26.1",
     "vite": "^6.3.5",
     "wrangler": "^4.19.1"
-  },
-  "pnpm": {
-    "overrides": {
-      "tailwindcss": "4.0.3",
-      "@tailwindcss/node": "4.0.3",
-      "@tailwindcss/postcss": "4.0.3",
-      "@tailwindcss/vite": "4.0.3"
-    }
   }
 }
