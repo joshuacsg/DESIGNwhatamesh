@@ -16,7 +16,6 @@ const defaultColorSets = [
     color2: "#fff",
     color3: "#fff",
   },
-  //http://localhost:4003/?color1=a7dbce&color2=d0ebff&color3=d7f5fc
   {
     color1: "#a7dbce",
     color2: "#d0ebff",
@@ -43,6 +42,8 @@ const MeshGradientwhatamesh: React.FC = () => {
   const [color1, setColor1] = useState<string>(colorSet.color1);
   const [color2, setColor2] = useState<string>(colorSet.color2);
   const [color3, setColor3] = useState<string>(colorSet.color3);
+  // const [bgColor, setBgColor] = useState<string>("#FFFFFF");
+  const [gradientLoaded, setGradientLoaded] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordDuration, setRecordDuration] = useState<number>(5);
   const [width, setWidth] = useState<number>(1920);
@@ -52,11 +53,11 @@ const MeshGradientwhatamesh: React.FC = () => {
   const isInitialMount = useRef(true);
 
   useEffect(() => {
-    // Initialize the gradient after the component mounts
     gradientRef.current = new Gradient();
     gradientRef.current.initGradient("#gradient-canvas");
     gradientRef.current.amp = 2;
-  }, [color1, color2, color3]);
+    setGradientLoaded(true);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -186,9 +187,10 @@ const MeshGradientwhatamesh: React.FC = () => {
   };
 
   return (
-    <div style={{ position: "relative", height: "100vh" }}>
+    <div style={{ position: "relative", height: "100vh", backgroundColor: "transparent" }}>
       {/* Canvas for the gradient background */}
       <canvas
+        className={gradientLoaded ? "fade-in" : ""}
         id="gradient-canvas"
         style={{
           position: "absolute",
@@ -199,6 +201,7 @@ const MeshGradientwhatamesh: React.FC = () => {
           "--gradient-color-1": color1,
           "--gradient-color-2": color2,
           "--gradient-color-3": color3,
+          opacity: gradientLoaded ? 1 : 0,
         } as React.CSSProperties}
       />
 
@@ -227,6 +230,15 @@ const MeshGradientwhatamesh: React.FC = () => {
 
               .color-animate {
                 animation: colorCycle 6s linear infinite;
+              }
+
+              /* Fade-in for the canvas */
+              @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              .fade-in {
+                animation: fadeIn 1s ease-in-out forwards;
               }
             `}
           </style>

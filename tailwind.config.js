@@ -2,6 +2,18 @@
 export default {
   darkMode: ["class"],
   content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  safelist: [],
+  corePlugins: {
+    preflight: false,
+  },
+  terserOptions: {
+    mangle: {
+      toplevel: true,
+      properties: {
+        regex: /^_(?!jsx|jsxs)/   // mangle private (“_”) fields but keep the JSX helpers intact
+      }
+    }
+  },
 
   theme: {
     extend: {
