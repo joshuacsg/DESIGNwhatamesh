@@ -96,22 +96,34 @@ const MeshGradientwhatamesh: React.FC<{
     const urlColor2 = params.get("color2");
     const urlColor3 = params.get("color3");
 
+    // Load numeric params if provided
+    const urlSpeed = parseFloat(params.get("speed") ?? "");
+    const urlSpread = parseFloat(params.get("spread") ?? "");
+    const urlRotation = parseFloat(params.get("rotation") ?? "");
+
     const isValidHex = (val: string | null) => !!val && /^[0-9a-f]{6}$/i.test(val);
     const incoming = [...colorsHex];
     if (isValidHex(urlColor1)) incoming[0] = `#${urlColor1}`;
     if (isValidHex(urlColor2)) incoming[1] = `#${urlColor2}`;
     if (isValidHex(urlColor3)) incoming[2] = `#${urlColor3}`;
     setColorsHex(incoming);
+
+    if (!Number.isNaN(urlSpeed)) setSpeedValue(urlSpeed);
+    if (!Number.isNaN(urlSpread)) setSpreadValue(urlSpread);
+    if (!Number.isNaN(urlRotation)) setRotationValue(urlRotation);
   }, []);
 
+  // Update URL whenever editable params change
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     params.set("color1", colorsHex[0].substring(1));
     params.set("color2", colorsHex[1].substring(1));
     params.set("color3", colorsHex[2].substring(1));
-    // We could store colour4/5 if needed.
+    params.set("speed", speedValue.toString());
+    params.set("spread", spreadValue.toString());
+    params.set("rotation", rotationValue.toString());
     window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
-  }, [colorsHex]);
+  }, [colorsHex, speedValue, spreadValue, rotationValue]);
 
   const rgbColors = colorsHex.map(hexToRgb) as [number, number, number][];
   const [colorOne, colorTwo, colorThree, colorFour, colorFive] = rgbColors;
