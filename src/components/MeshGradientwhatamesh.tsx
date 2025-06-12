@@ -1,11 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import {
-  softGradient,
-  linearGradient,
-  parallaxStars,
-  blobGradient,
-  auroraWave,
-} from "@/shaders/shaders";
+import { linearGradient, blobGradient } from "@/shaders/shaders";
 import ShaderControls from "./ShaderControls";
 import ThreejsCanvas from "./ThreejsCanvas";
 
@@ -58,11 +52,11 @@ const hexToRgb = (hex: string): [number, number, number] => {
 
 // Map each shader to how many colour uniforms the fragment actually uses.
 const shaderConfigs = [
-  { shader: softGradient, colorCount: 2 },
+  // { shader: softGradient, colorCount: 2 },
   { shader: linearGradient, colorCount: 2 },
-  { shader: parallaxStars, colorCount: 0 },
+  // { shader: parallaxStars, colorCount: 0 },
   { shader: blobGradient, colorCount: 4 },
-  { shader: auroraWave, colorCount: 2 },
+  // { shader: auroraWave, colorCount: 2 },
 ] as const;
 
 const MeshGradientwhatamesh: React.FC<{
@@ -154,7 +148,7 @@ const MeshGradientwhatamesh: React.FC<{
     params.set("color3", colorsHex[2].substring(1));
     params.set("speed", speedValue.toString());
     params.set("spread", spreadValue.toString());
-    params.set("rotation", rotationValue.toString());
+    params.set("rotation", Math.round(rotationValue).toString());
     window.history.replaceState(
       {},
       "",
@@ -188,13 +182,31 @@ const MeshGradientwhatamesh: React.FC<{
       <div
         style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
       >
-        <ThreejsCanvas
-          colorA={colorOne}
-          colorB={colorTwo}
-          width={spreadValue}
-          speed={speedValue}
-          rotationDeg={(rotationValue * 180) / Math.PI}
-        />
+        {(() => {
+          const pathnameSegment =
+            typeof window !== "undefined"
+              ? window.location.pathname.split("/").filter(Boolean)[0] ?? "0"
+              : "0";
+          const index = Number(pathnameSegment);
+          const selectedConfig =
+            !Number.isNaN(index) && shaderConfigs[index]
+              ? shaderConfigs[index]
+              : shaderConfigs[0];
+
+          return (
+            <ThreejsCanvas
+              shader={selectedConfig.shader}
+              colorA={colorOne}
+              colorB={colorTwo}
+              colorC={colorThree}
+              colorD={colorFour}
+              colorE={colorFive}
+              width={spreadValue}
+              speed={speedValue}
+              rotationDeg={rotationValue}
+            />
+          );
+        })()}
       </div>
 
       {/* Shader editing controls */}

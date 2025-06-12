@@ -33,7 +33,7 @@ interface ShaderControlsProps {
   /**
    * Current rotation uniform value and change callback.
    */
-  rotation: number; // radians
+  rotation: number; // degrees
   onRotationChange: (value: number) => void;
   /** Whether the UI should render at all. */
   show?: boolean;
@@ -56,17 +56,17 @@ const ShaderControls: React.FC<ShaderControlsProps> = ({
   // Local state for the speed input so we only commit changes on blur
   const [tempSpeed, setTempSpeed] = React.useState<string>(speed.toString());
   const [tempSpread, setTempSpread] = React.useState<string>(spread.toString());
-  const [tempRotation, setTempRotation] = React.useState<string>((rotation * 180 / Math.PI).toString());
+  const [tempRotation, setTempRotation] = React.useState<string>(rotation.toString());
   React.useEffect(() => {
     setTempSpeed(speed.toString());
     setTempSpread(spread.toString());
-    setTempRotation((rotation * 180 / Math.PI).toString());
+    setTempRotation(rotation.toString());
   }, [speed]);
   React.useEffect(() => {
     setTempSpread(spread.toString());
   }, [spread]);
   React.useEffect(() => {
-    setTempRotation((rotation * 180 / Math.PI).toString());
+    setTempRotation(rotation.toString());
   }, [rotation]);
 
   return (
@@ -148,7 +148,7 @@ const ShaderControls: React.FC<ShaderControlsProps> = ({
               onBlur={() => {
                 const val = parseFloat(tempRotation);
                 if (!Number.isNaN(val)) {
-                  onRotationChange((val * Math.PI) / 180);
+                  onRotationChange(Math.round(val)); // ensure integer degrees
                 }
               }}
               className="w-20 border rounded px-2 py-1"

@@ -16,18 +16,27 @@ import { linearGradient } from "@/shaders/shaders";
 type Props = {
   colorA?: [number, number, number]; // linear-space RGB 0-1
   colorB?: [number, number, number];
+  colorC?: [number, number, number];
+  colorD?: [number, number, number];
+  colorE?: [number, number, number];
   width?: number; // UV width of one band
   speed?: number; // bands/second
   /** Rotation of the gradient axis in DEGREES (0° = left→right). */
   rotationDeg?: number;
+  /** Shader factory (uniforms→material). Defaults to linearGradient. */
+  shader?: (uniforms: any) => ShaderMaterial;
 };
 
 export default function ThreejsCanvas({
   colorA = [1.0, 0.38, 0.0],
   colorB = [0.16, 0.64, 1.0],
+  colorC = [0.16, 0.64, 1.0],
+  colorD = [0.16, 0.64, 1.0],
+  colorE = [0.16, 0.64, 1.0],
   width = 0.5,
   speed = 0.2,
   rotationDeg = 90,
+  shader = linearGradient,
 }: Props) {
   const mountRef = useRef<HTMLDivElement | null>(null);
 
@@ -41,9 +50,12 @@ export default function ThreejsCanvas({
     el.appendChild(renderer.domElement);
 
     // ───────────────── shader material ─────────────────
-    const uniforms = {
+    const uniforms: any = {
       uColorA: { value: new Vector3(...colorA) },
       uColorB: { value: new Vector3(...colorB) },
+      uColorC: { value: new Vector3(...colorC) },
+      uColorD: { value: new Vector3(...colorD) },
+      uColorE: { value: new Vector3(...colorE) },
       uWidth: { value: width },
       uSpeed: { value: speed },
       uTime: { value: 0 },
@@ -54,7 +66,7 @@ export default function ThreejsCanvas({
 
     const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1); // covers NDC directly
     const geometry = new PlaneGeometry(2, 2); // fills the clip-space square
-    const mesh = new Mesh(geometry, linearGradient(uniforms));
+    const mesh = new Mesh(geometry, shader(uniforms));
     scene.add(mesh);
 
     // ───────────────── resize handling ─────────────────
@@ -90,7 +102,7 @@ export default function ThreejsCanvas({
       geometry.dispose();
       (mesh.material as ShaderMaterial).dispose();
     };
-  }, [colorA, colorB, width, speed, rotationDeg]);
+  }, [colorA, colorB, colorC, colorD, colorE, width, speed, rotationDeg, shader]);
 
   return <div ref={mountRef} style={{ width: "100%", height: "100%" }} />;
 }
