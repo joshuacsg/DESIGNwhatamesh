@@ -1,61 +1,70 @@
-import path from "path"
-import tailwindcss from "@tailwindcss/vite"
-import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
-import { viteSingleFile } from "vite-plugin-singlefile"
+import path from "path";
+import tailwindcss from "@tailwindcss/vite";
+import react from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+import { viteSingleFile } from "vite-plugin-singlefile";
 
-import { ViteMinifyPlugin } from "vite-plugin-minify"
+import { ViteMinifyPlugin } from "vite-plugin-minify";
+import glsl from 'vite-plugin-glsl';
 
 // @ts-ignore
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
+    glsl(),
     mode === "inline" && viteSingleFile({
       removeViteModuleLoader: true,
     }),
     mode === "inline" && ViteMinifyPlugin({
-      collapseWhitespace:        true,
-      removeComments:            true,
+      collapseWhitespace: true,
+      removeComments: true,
       removeRedundantAttributes: true,
-      removeEmptyAttributes:     true,
-      minifyCSS:                 true,
-      minifyJS:                  true,
+      removeEmptyAttributes: true,
+      minifyCSS: true,
+      minifyJS: true,
     }),
   ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    dedupe: [
+      "react",
+      "react-dom",
+      "three",
+      "@react-three/fiber",
+      "@kortexa-ai/react-shadertoy",
+    ],
   },
   // Only tweak build when creating the inline bundle
   ...(mode === "inline"
     ? {
-        build: {
-          target: "esnext",
-          cssTarget: "chrome61",
-          assetsDir: "", // put assets next to index.html (will be deleted by plugin)
-          minify: "terser",
-          terserOptions: {
-            compress: {
-              booleans_as_integers: true,
-              drop_console: true,
-              passes: 2,
-            },
-            mangle: {
-              toplevel: true,
-              // mangle properties that are obviously private (start with underscore)
-              properties: {
-                regex: /^_(?!jsx|jsxs)/,
-              },
-            },
+      build: {
+        target: "esnext",
+        cssTarget: "chrome61",
+        assetsDir: "", // put assets next to index.html (will be deleted by plugin)
+        minify: "terser",
+        terserOptions: {
+          compress: {
+            booleans_as_integers: true,
+            drop_console: true,
+            passes: 2,
           },
-          rollupOptions: {
-            output: {
-              inlineDynamicImports: true,
+          mangle: {
+            toplevel: true,
+            // mangle properties that are obviously private (start with underscore)
+            properties: {
+              regex: /^_(?!jsx|jsxs)/,
             },
           },
         },
-      }
+        rollupOptions: {
+          output: {
+            inlineDynamicImports: true,
+          },
+        },
+      },
+    }
     : {}),
-}))
+}));

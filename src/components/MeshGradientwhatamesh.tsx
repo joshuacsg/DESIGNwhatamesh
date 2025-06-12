@@ -1,364 +1,261 @@
-import { useEffect, useState, useRef } from "react";
-// @ts-ignore
-import { Gradient } from "../gradient.jsx";
+import React, { useState, useEffect, useMemo } from "react";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { ColorPicker } from "./ui/color-picker.js";
-import { Input } from "@/components/ui/input";
+  softGradient,
+  linearGradient,
+  parallaxStars,
+  blobGradient,
+  auroraWave,
+} from "@/shaders/shaders";
+import ShaderControls from "./ShaderControls";
+import ThreejsCanvas from "./ThreejsCanvas";
 
 const defaultColorSets = [
   {
     color1: "#aaa7db",
-    color2: "#fff",
-    color3: "#fff",
+    color2: "#ffffff",
+    color3: "#ffffff",
+    color4: "#ffffff",
+    color5: "#ffffff",
   },
   {
     color1: "#a7dbce",
     color2: "#d0ebff",
     color3: "#d7f5fc",
+    color4: "#ffffff",
+    color5: "#ffffff",
   },
   {
     color1: "#a7dbce",
     color2: "#d0ebff",
-    color3: "#fcd6d6",  
+    color3: "#fcd6d6",
+    color4: "#ffffff",
+    color5: "#ffffff",
   },
   {
     color1: "#dbbea7",
     color2: "#fffed1",
     color3: "#f3ffd3",
+    color4: "#ffffff",
+    color5: "#ffffff",
   },
-]
-const getRandomColorSet = () => {
-  const randomIndex = Math.floor(Math.random() * defaultColorSets.length);
-  return defaultColorSets[randomIndex];
-}
+];
 
-const MeshGradientwhatamesh: React.FC = () => {
-  const [colorSet, _] = useState<{color1: string, color2: string, color3: string}>(getRandomColorSet());
-  const [color1, setColor1] = useState<string>(colorSet.color1);
-  const [color2, setColor2] = useState<string>(colorSet.color2);
-  const [color3, setColor3] = useState<string>(colorSet.color3);
-  // const [bgColor, setBgColor] = useState<string>("#FFFFFF");
-  const [gradientLoaded, setGradientLoaded] = useState<boolean>(false);
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [recordDuration, setRecordDuration] = useState<number>(5);
-  const [width, setWidth] = useState<number>(1920);
-  const [height, setHeight] = useState<number>(1080);
+const getRandomColorSet = () =>
+  defaultColorSets[Math.floor(Math.random() * defaultColorSets.length)];
+
+// Helper function to convert hex to RGB (0-1 range)
+const hexToRgb = (hex: string): [number, number, number] => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) {
+    throw new Error(`Invalid hex color: ${hex}`);
+  }
+  return [
+    parseInt(result[1], 16) / 255,
+    parseInt(result[2], 16) / 255,
+    parseInt(result[3], 16) / 255,
+  ];
+};
+
+// Map each shader to how many colour uniforms the fragment actually uses.
+const shaderConfigs = [
+  { shader: softGradient, colorCount: 2 },
+  { shader: linearGradient, colorCount: 2 },
+  { shader: parallaxStars, colorCount: 0 },
+  { shader: blobGradient, colorCount: 4 },
+  { shader: auroraWave, colorCount: 2 },
+] as const;
+
+const MeshGradientwhatamesh: React.FC<{
+  speed?: number;
+  motionOffset?: number;
+  bandCount?: number;
+  cycleLength?: number;
+  blendWindow?: number;
+  timeScale?: [number, number, number, number];
+  sineFreq?: [number, number, number, number];
+  phaseShift?: [number, number, number, number];
+  spread?: number;
+  rotation?: number;
+}> = ({
+  speed,
+  motionOffset,
+  bandCount,
+  cycleLength,
+  blendWindow,
+  timeScale,
+  sineFreq,
+  phaseShift,
+  spread,
+  rotation,
+}) => {
+  // Generate a single random color set once on mount
+  const initialColorSet = useMemo(() => getRandomColorSet(), []);
+
+  // Maintain a 5-element colour array.
+  const [colorsHex, setColorsHex] = useState<string[]>([
+    initialColorSet.color1,
+    initialColorSet.color2,
+    initialColorSet.color3,
+    initialColorSet.color4,
+    initialColorSet.color5,
+  ]);
+
+  // Uniform speed (defaults to prop or shader default 1.3)
+  const [speedValue, setSpeedValue] = useState<number>(speed ?? 0.2);
+
+  // Spread and rotation uniform values
+  const [spreadValue, setSpreadValue] = useState<number>(spread ?? 3.0);
+  const [rotationValue, setRotationValue] = useState<number>(
+    rotation ?? 90
+  );
+
+  const setColorHexAt = (index: number, value: string) => {
+    setColorsHex((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  };
+
+  // Control visibility through URL param (?controls=true)
   const [showControls, setShowControls] = useState<boolean>(false);
-  const gradientRef = useRef<any>(null);
-  const isInitialMount = useRef(true);
-
-  useEffect(() => {
-    gradientRef.current = new Gradient();
-    gradientRef.current.initGradient("#gradient-canvas");
-    gradientRef.current.amp = 2;
-    setGradientLoaded(true);
-  }, []);
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    setShowControls(params.get("controls") === "true");
+
+    // Allow colours to be pre-configured via URL e.g. ?color1=ff0000
     const urlColor1 = params.get("color1");
     const urlColor2 = params.get("color2");
     const urlColor3 = params.get("color3");
-    const controlsParam = params.get("controls");
 
-    const isValidHex = (color: string | null): boolean => {
-      if (!color) return false;
-      return /^[0-9a-f]{6}$/i.test(color);
-    };
+    // Load numeric params if provided
+    const urlSpeed = parseFloat(params.get("speed") ?? "");
+    const urlSpread = parseFloat(params.get("spread") ?? "");
+    const urlRotation = parseFloat(params.get("rotation") ?? "");
 
-    if (urlColor1 && isValidHex(urlColor1)) {
-      setColor1(`#${urlColor1}`);
-    }
-    if (urlColor2 && isValidHex(urlColor2)) {
-      setColor2(`#${urlColor2}`);
-    }
-    if (urlColor3 && isValidHex(urlColor3)) {
-      setColor3(`#${urlColor3}`);
-    }
+    const isValidHex = (val: string | null) =>
+      !!val && /^[0-9a-f]{6}$/i.test(val);
+    const incoming = [...colorsHex];
+    if (isValidHex(urlColor1)) incoming[0] = `#${urlColor1}`;
+    if (isValidHex(urlColor2)) incoming[1] = `#${urlColor2}`;
+    if (isValidHex(urlColor3)) incoming[2] = `#${urlColor3}`;
+    setColorsHex(incoming);
 
-    if (controlsParam === "true") {
-      setShowControls(true);
-    }
+    if (!Number.isNaN(urlSpeed)) setSpeedValue(urlSpeed);
+    if (!Number.isNaN(urlSpread)) setSpreadValue(urlSpread);
+    if (!Number.isNaN(urlRotation)) setRotationValue(urlRotation);
   }, []);
 
+  // Update URL whenever editable params change
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-
     const params = new URLSearchParams(window.location.search);
-    params.set("color1", color1.substring(1));
-    params.set("color2", color2.substring(1));
-    params.set("color3", color3.substring(1));
-    window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
-  }, [color1, color2, color3]);
+    params.set("color1", colorsHex[0].substring(1));
+    params.set("color2", colorsHex[1].substring(1));
+    params.set("color3", colorsHex[2].substring(1));
+    params.set("speed", speedValue.toString());
+    params.set("spread", spreadValue.toString());
+    params.set("rotation", rotationValue.toString());
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}?${params.toString()}`
+    );
+  }, [colorsHex, speedValue, spreadValue, rotationValue]);
 
-  const handleRecord = () => {
-    const canvas = document.getElementById(
-      "gradient-canvas"
-    ) as HTMLCanvasElement;
-    if (!canvas || !gradientRef.current) return;
-
-    setIsRecording(true);
-
-    const offscreenCanvas = document.createElement("canvas");
-    offscreenCanvas.width = width;
-    offscreenCanvas.height = height;
-    const ctx = offscreenCanvas.getContext("2d");
-
-    if (!ctx) {
-      console.error("Failed to get 2D context from offscreen canvas.");
-      setIsRecording(false);
-      return;
-    }
-
-    const stream = offscreenCanvas.captureStream();
-    const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
-
-    const recordedChunks: Blob[] = [];
-
-    recorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        recordedChunks.push(event.data);
-      }
-    };
-
-    let animationFrameId: number;
-
-    const drawFrame = () => {
-      const sourceAspect = canvas.width / canvas.height;
-      const targetAspect = width / height;
-
-      let sourceX = 0;
-      let sourceY = 0;
-      let sourceWidth = canvas.width;
-      let sourceHeight = canvas.height;
-
-      if (sourceAspect > targetAspect) {
-        // Source is wider than target, crop width
-        sourceWidth = canvas.height * targetAspect;
-        sourceX = (canvas.width - sourceWidth) / 2;
-      } else if (sourceAspect < targetAspect) {
-        // Source is narrower than target, crop height
-        sourceHeight = canvas.width / targetAspect;
-        sourceY = (canvas.height - sourceHeight) / 2;
-      }
-
-      ctx.drawImage(
-        canvas,
-        sourceX,
-        sourceY,
-        sourceWidth,
-        sourceHeight,
-        0,
-        0,
-        width,
-        height
-      );
-      animationFrameId = requestAnimationFrame(drawFrame);
-    };
-
-    recorder.onstop = () => {
-      cancelAnimationFrame(animationFrameId);
-      const blob = new Blob(recordedChunks, { type: "video/webm" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `whatamesh-gradient-${new Date().toISOString()}.webm`;
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      setIsRecording(false);
-    };
-
-    recorder.start();
-    animationFrameId = requestAnimationFrame(drawFrame);
-
-    setTimeout(() => {
-      recorder.stop();
-    }, recordDuration * 1000);
-  };
+  const rgbColors = colorsHex.map(hexToRgb) as [number, number, number][];
+  const [colorOne, colorTwo, colorThree, colorFour, colorFive] = rgbColors;
 
   return (
-    <div style={{ position: "relative", height: "100vh", backgroundColor: "transparent" }}>
-      {/* Canvas for the gradient background */}
-      <canvas
-        className={gradientLoaded ? "fade-in" : ""}
-        id="gradient-canvas"
+    <div>
+      {/* <img
+        src="/public/demo-evening.png"
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+      />
+      */}
+      <div
         style={{
           position: "absolute",
           top: 0,
           left: 0,
-          width: "100%",
-          height: "100%",
-          "--gradient-color-1": color1,
-          "--gradient-color-2": color2,
-          "--gradient-color-3": color3,
-          opacity: gradientLoaded ? 1 : 0,
-        } as React.CSSProperties}
-      />
+          right: 0,
+          bottom: 0,
+          backgroundColor: "black",
+          opacity: 0.5,
+        }}
+      ></div>
+      {/* Determine shader based on URL path: /0 => softGradient, /1 => linearGradient, etc. */}
 
-      <div className="container h-screen mx-auto flex justify-center items-center relative">
-        <div className="flex flex-col justify-start px-48 space-y-12 z-10">
-          {/* Style tag for inline keyframes */}
-          <style>
-            {`
-              @keyframes colorCycle {
-                0% {
-                  color: black;
-                }
-                25% {
-                  color: black;
-                }
-                50% {
-                  color: white;
-                }
-                75% {
-                  color: white;
-                }
-                100% {
-                  color: black;
-                }
-              }
-
-              .color-animate {
-                animation: colorCycle 6s linear infinite;
-              }
-
-              /* Fade-in for the canvas */
-              @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-              }
-              .fade-in {
-                animation: fadeIn 1s ease-in-out forwards;
-              }
-            `}
-          </style>
-        </div>
+      <div
+        style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+      >
+        <ThreejsCanvas
+          colorA={colorOne}
+          colorB={colorTwo}
+          width={spreadValue}
+          speed={speedValue}
+          rotationDeg={(rotationValue * 180) / Math.PI}
+        />
       </div>
-      {showControls && (
-        <>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                className="fixed bottom-5 left-5 z-20"
-                variant={"outline"}
-                disabled={isRecording}
-              >
-                {isRecording ? "Recording..." : "Record"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="bg-white">
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <h4 className="font-medium leading-none">
-                    Recording Settings
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    Configure video output settings.
-                  </p>
-                </div>
-                <div className="grid gap-2">
-                  <div className="grid grid-cols-3 items-center gap-4">
-                    <label htmlFor="duration">Duration (s)</label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      value={recordDuration}
-                      onChange={(e) =>
-                        setRecordDuration(Number(e.target.value))
-                      }
-                      className="col-span-2 h-8"
-                      min="1"
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 items-center gap-4">
-                    <label htmlFor="width">Width</label>
-                    <Input
-                      id="width"
-                      type="number"
-                      value={width}
-                      onChange={(e) => setWidth(Number(e.target.value))}
-                      className="col-span-2 h-8"
-                      min="1"
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 items-center gap-4">
-                    <label htmlFor="height">Height</label>
-                    <Input
-                      id="height"
-                      type="number"
-                      value={height}
-                      onChange={(e) => setHeight(Number(e.target.value))}
-                      className="col-span-2 h-8"
-                      min="1"
-                    />
-                  </div>
-                </div>
-                <Button onClick={handleRecord} disabled={isRecording}>
-                  Start Recording
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                className="fixed bottom-5 right-5 z-20"
-                variant={"outline"}
-              >
-                Edit
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="bg-white">
-              <div className="space-y-4">
-                <h4 className="font-medium">Edit Gradient Colors</h4>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="color1" className="pr-4">
-                    Color 1
-                  </label>
-                  <ColorPicker
-                    value={color1}
-                    onChange={setColor1}
-                    className="w-16 h-8"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="color2" className="pr-4">
-                    Color 2
-                  </label>
-                  <ColorPicker
-                    value={color2}
-                    onChange={setColor2}
-                    className="w-16 h-8"
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="color3" className="pr-4">
-                    Color 3
-                  </label>
-                  <ColorPicker
-                    value={color3}
-                    onChange={setColor3}
-                    className="w-16 h-8"
-                  />
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        </>
+      {/* Shader editing controls */}
+      {(() => {
+        const pathnameSegment =
+          typeof window !== "undefined"
+            ? window.location.pathname.split("/").filter(Boolean)[0] ?? "0"
+            : "0";
+        const index = Number(pathnameSegment);
+        const selectedConfig =
+          !Number.isNaN(index) && shaderConfigs[index]
+            ? shaderConfigs[index]
+            : shaderConfigs[0];
+        return (
+          <ShaderControls
+            colors={colorsHex}
+            visibleCount={selectedConfig.colorCount}
+            onChange={setColorHexAt}
+            speed={speedValue}
+            onSpeedChange={setSpeedValue}
+            spread={spreadValue}
+            onSpreadChange={setSpreadValue}
+            rotation={rotationValue}
+            onRotationChange={setRotationValue}
+            show={showControls}
+          />
+        );
+      })()}
+
+      {/* Navigation arrows */}
+      {showControls && (
+        <div className="fixed bottom-5 left-5 flex items-center gap-2 z-20">
+          <button
+            onClick={() => {
+              const pathnameSegment =
+                window.location.pathname.split("/").filter(Boolean)[0] ?? "0";
+              const index = Number(pathnameSegment);
+              const prev =
+                (index - 1 + shaderConfigs.length) % shaderConfigs.length;
+              window.location.href = `/${prev}${window.location.search}`;
+            }}
+            className="bg-white/70 hover:bg-white text-black rounded-full w-8 h-8 flex items-center justify-center shadow"
+          >
+            ◀
+          </button>
+          <button
+            onClick={() => {
+              const pathnameSegment =
+                window.location.pathname.split("/").filter(Boolean)[0] ?? "0";
+              const index = Number(pathnameSegment);
+              const next = (index + 1) % shaderConfigs.length;
+              window.location.href = `/${next}${window.location.search}`;
+            }}
+            className="bg-white/70 hover:bg-white text-black rounded-full w-8 h-8 flex items-center justify-center shadow"
+          >
+            ▶
+          </button>
+        </div>
       )}
     </div>
   );
-}
+};
 
 export default MeshGradientwhatamesh;
